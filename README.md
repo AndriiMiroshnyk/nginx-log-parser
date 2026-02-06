@@ -21,6 +21,23 @@ A **Dockerfile** is included so the script can run in a container, making it rep
 
 ---
 
+## Project Structure
+
+```text
+.
+├── nginx_to_csv.py        # Main script to parse nginx logs and export CSV
+├── Dockerfile             # Containerized execution of the parser
+├── README.md              # Project documentation
+├── .gitignore             # Git ignore rules
+├── LICENSE                # Project license (MIT)
+├── sample/
+│   └── nginx.log          # Example nginx access log
+└── output/
+    └── nginx.csv          # Generated CSV output
+```
+
+---
+
 ## Log Format
 
 The script expects nginx logs extended with Grafana/Prometheus metrics, e.g.:
