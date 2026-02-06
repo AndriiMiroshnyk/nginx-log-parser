@@ -3,7 +3,6 @@
 import argparse
 import csv
 import re
-import sys
 
 # Add CLI arguments
 def parse_args():
@@ -19,7 +18,7 @@ LOG_PATTERN = re.compile(
     r'(?P<ip>\S+) - \S+ \[(?P<time>[^\]]+)\] '
     r'"(?P<method>\S+) (?P<path>\S+) (?P<proto>\S+)" '
     r'(?P<status>\d+) (?P<bytes>\d+) '
-    r'"(?P<referer>[^"]*)" "(?P<ua>[^"]*)"'
+    r'"(?P<referer>[^"]*)" "(?P<ua>[^"]*)"(?P<extras>.*)'
 )
 
 # Parse the log file
@@ -27,13 +26,29 @@ def parse_log(file_path):
     rows = []
     skipped = 0
 
-    with open(file_path) as f:
-        for line in f:
-            match = LOG_PATTERN.match(line)
-            if not match:
-                skipped += 1
-                continue
-            rows.append(match.groupdict())
+    for line in open(file_path):
+        match = LOG_PATTERN.match(line)
+        if not match:
+            skipped += 1
+            continue
+
+        row = match.groupdict()
+        extras = row.pop("extras").strip().split()
+        extra_fields = [
+            "req_bytes",
+            "req_duration",
+            "upstream_name",
+            "labels",
+            "upstream_ip",
+            "resp_bytes",
+            "resp_duration",
+            "upstream_status",
+            "request_id"
+        ]
+        for i, field in enumerate(extra_fields):
+            row[field] = extras[i] if i < len(extras) else ""
+
+        rows.append(row)
 
     return rows, skipped
 
@@ -49,8 +64,10 @@ def process_rows(rows, status_filter=None, sort_by=None):
 
 # Write CSV output
 def write_csv(rows, output_path):
-    fieldnames = ["ip", "time", "method", "path", "proto", "status", "bytes", "referer", "ua"]
-
+    fieldnames = [
+        "ip", "time", "method", "path", "proto", "status", "bytes", "referer", "ua",
+        "req_bytes","req_duration","upstream_name","labels","upstream_ip","resp_bytes","resp_duration","upstream_status","request_id"
+    ]
     with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -58,7 +75,6 @@ def write_csv(rows, output_path):
 
 def main():
     args = parse_args()
-
     rows, skipped = parse_log(args.input)
     rows = process_rows(rows, args.filter_status, args.sort_by)
     write_csv(rows, args.output)
